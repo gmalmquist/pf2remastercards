@@ -1,9 +1,30 @@
 #!/usr/bin/env python3
+import datetime
 import json
+import os
 import re
 import sys
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from io import StringIO
 from subprocess import check_output, Popen, PIPE, STDOUT
+
+class SpellCache:
+  spells = {}
+  retention = datetime.timedelta(days = 1)
+
+  @classmethod
+  def put(cls, name, spell):
+    cls.spells[name] = (spell, datetime.datetime.now())
+
+  @classmethod
+  def get(cls, name):
+    spell, time = cls.spells.get(name, (None, None))
+    if spell is None:
+      return None
+    if time + cls.retention < datetime.datetime.now():
+      return None
+    return spell
 
 class AttrDict:
   def __init__(self, store):
@@ -18,6 +39,9 @@ class AttrDict:
     return self._store.get(name)
 
 def search_spell(spell_name):
+  spell = SpellCache.get(spell_name)
+  if spell is not None:
+    return spell
   headers = {
     'Accept-Encoding': 'gzip, deflate, br',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
@@ -148,9 +172,10 @@ def search_spell(spell_name):
   if type(response) == type({}):
     hits = response.get('hits', {}).get('hits', [])
     if len(hits) > 0:
-      return AttrDict(hits[0].get('_source'))
-  sys.stderr.write('Invalid spell: {}\n'.format(json.dumps(response, indent = 2)))
-  sys.stderr.flush()
+      spell = AttrDict(hits[0].get('_source'))
+      SpellCache.put(spell_name, spell)
+      return spell
+
 
 def there(value):
   if value is None:
@@ -250,14 +275,92 @@ def format_card(spell):
 
   return ''.join(card)
 
-with open('head.html', 'r') as f:
-  print(f.read())
+def write_cards(cards, out):
+  with open('head.html', 'rb') as f:
+    out.write(f.read())
 
-spells = filter(None, map(search_spell, sys.argv[1:]))
-spells = sorted(spells, key = lambda s: (s.spell_type, s.level, s.name))
-for spell in spells:
-  print(format_card(spell))
+  spells = filter(None, map(search_spell, cards))
+  spells = sorted(spells, key = lambda s: (s.spell_type, s.level, s.name))
+  for spell in spells:
+    out.write(format_card(spell).encode('utf8'))
 
-with open('tail.html', 'r') as f:
-  print(f.read())
+  with open('tail.html', 'rb') as f:
+    out.write(f.read())
+
+class RequestHandler(BaseHTTPRequestHandler):
+  VALID_PATH = re.compile(r'^[a-zA-Z0-9]+([.][a-zA-Z0-9]+)?$')
+  R404 = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>404</title>
+    </head>
+    <body>
+      <h1>404 Not Found</h1>
+    </body>
+    </html>
+  '''.strip().encode('utf8')
+  CONTENT_TYPES = {
+    'css': 'text/css',
+    'js': 'text/javascript',
+    'json': 'application/json',
+    'html': 'text/html',
+    'png': 'image/x-png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'ico': 'image/x-icon',
+  }
+
+  def _send(self, content, code = 200, mime = 'text/html'):
+    self.send_response(code)
+    self.send_header('Content-Type', mime)
+    self.send_header('Content-Length', len(content))
+    self.end_headers()
+    self.wfile.write(content)
+    self.wfile.flush()
+
+  def do_GET(self):
+    path = self.path.lstrip('/').lstrip('?').strip()
+    if path == '':
+      path = 'index.html'
+    filepath = os.path.normpath(os.path.join(os.getcwd(), path))
+
+    if RequestHandler.VALID_PATH.match(path) is None:
+      self._send("Invalid path. Don't be sneaky.".encode('utf8'), code = 400)
+      return
+
+    if not os.path.exists(filepath):
+      self._send(RequestHandler.R404, code = 404)
+      return
+
+    extension = path[path.rfind('.')+1:] if '.' in path else ''
+    with open(filepath, 'rb') as f:
+      self._send(
+        f.read(),
+        code = 200,
+        mime = RequestHandler.CONTENT_TYPES.get(extension.lower(), 'text/html'),
+      )
+      return
+
+  def do_POST(self):
+    try:
+      content_length = int(self.headers['Content-Length'])
+      data = json.loads(self.rfile.read(content_length).decode('utf8'))
+    except Exception as e:
+      self._send('Invalid data: {}'.format(str(e)).encode('utf8'), code = 400)
+      return
+    self.send_response(200)
+    self.send_header('Content-Type', 'text/html')
+    self.end_headers()
+    write_cards(data, self.wfile)
+    return
+
+if len(sys.argv) <= 1:
+  addr = ('', 8120)
+  httpd = HTTPServer(addr, RequestHandler)
+  httpd.serve_forever()
+else:
+  write_cards(sys.argv[1:], sys.stdout)
+  sys.stdout.flush()
 
