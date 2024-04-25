@@ -240,7 +240,7 @@ def format_card(spell):
   '''.format(
     title = spell.name,
     spell_type = spell.spell_type,
-    rank = spell.level if spell.spell_type == 'Spell' else '',
+    rank = spell.level if spell.spell_type != 'Cantrip' else '',
     traits = ''.join('<span class="trait">{}</span>'.format(trait) for trait in (spell.trait or [])),
   ))
   card.append(prop('pfs', 'PFS', spell.pfs if spell.pfs != 'Standard' else None))
@@ -315,10 +315,18 @@ class RequestHandler(BaseHTTPRequestHandler):
   def _send(self, content, code = 200, mime = 'text/html'):
     self.send_response(code)
     self.send_header('Content-Type', mime)
+    self.send_header('Access-Control-Allow-Origin: https://gmalmquist.github.io', mime)
+    self.send_header('Access-Control-Allow-Origin: https://gwenscode.com', mime)
     self.send_header('Content-Length', len(content))
     self.end_headers()
     self.wfile.write(content)
     self.wfile.flush()
+
+  def do_HEAD(self):
+    self.send_response(code)
+    self.send_header('Access-Control-Allow-Origin: https://gmalmquist.github.io', mime)
+    self.send_header('Access-Control-Allow-Origin: https://gwenscode.com', mime)
+    self.end_headers()
 
   def do_GET(self):
     path = self.path.lstrip('/').lstrip('?').strip()
