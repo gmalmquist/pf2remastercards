@@ -315,8 +315,8 @@ class RequestHandler(BaseHTTPRequestHandler):
   def _send(self, content, code = 200, mime = 'text/html'):
     self.send_response(code)
     self.send_header('Content-Type', mime)
-    self.send_header('Access-Control-Allow-Origin: https://gmalmquist.github.io', mime)
-    self.send_header('Access-Control-Allow-Origin: https://gwenscode.com', mime)
+    self.send_header('Access-Control-Allow-Origin', 'https://gmalmquist.github.io')
+    self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
     self.send_header('Content-Length', len(content))
     self.end_headers()
     self.wfile.write(content)
@@ -324,14 +324,14 @@ class RequestHandler(BaseHTTPRequestHandler):
 
   def do_OPTIONS(self):
     self.send_response(200)
-    self.send_header('Access-Control-Allow-Origin: https://gmalmquist.github.io', mime)
-    self.send_header('Access-Control-Allow-Origin: https://gwenscode.com', mime)
+    self.send_header('Access-Control-Allow-Origin', 'https://gmalmquist.github.io')
+    self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
     self.end_headers()
 
   def do_HEAD(self):
     self.send_response(200)
-    self.send_header('Access-Control-Allow-Origin: https://gmalmquist.github.io', mime)
-    self.send_header('Access-Control-Allow-Origin: https://gwenscode.com', mime)
+    self.send_header('Access-Control-Allow-Origin', 'https://gmalmquist.github.io')
+    self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
     self.end_headers()
 
   def do_GET(self):
