@@ -43,6 +43,8 @@ function generateCards() {
     value: cardSizeOption.value,
     width: cardSizeOption.getAttribute("data-width"),
     height: cardSizeOption.getAttribute("data-height"),
+    'body-text': cardSizeOption.getAttribute('data-body-text'),
+    'head-text': cardSizeOption.getAttribute('data-head-text'),
   };
 
   document.cookie = "card-size=" + JSON.stringify(cardSizeValue) + ";";
@@ -61,6 +63,8 @@ function generateCards() {
     const r = document.querySelector(':root');
     r.style.setProperty('--card-width', cardSizeValue.width);
     r.style.setProperty('--card-height', cardSizeValue.height);
+    r.style.setProperty('--body-text', cardSizeValue['body-text']);
+    r.style.setProperty('--head-text', cardSizeValue['head-text']);
     console.log('card size', cardSizeValue);
   });
 }
