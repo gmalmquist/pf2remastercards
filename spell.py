@@ -312,11 +312,14 @@ class RequestHandler(BaseHTTPRequestHandler):
     'ico': 'image/x-icon',
   }
 
-  def _send(self, content, code = 200, mime = 'text/html'):
-    self.send_response(code)
-    self.send_header('Content-Type', mime)
+  def _send_cors(self):
     self.send_header('Access-Control-Allow-Origin', 'https://gmalmquist.github.io')
     self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
+
+  def _send(self, content, code = 200, mime = 'text/html'):
+    self.send_response(code)
+    self._send_cors()
+    self.send_header('Content-Type', mime)
     self.send_header('Content-Length', len(content))
     self.end_headers()
     self.wfile.write(content)
@@ -324,14 +327,12 @@ class RequestHandler(BaseHTTPRequestHandler):
 
   def do_OPTIONS(self):
     self.send_response(200)
-    self.send_header('Access-Control-Allow-Origin', 'https://gmalmquist.github.io')
-    self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
+    self._send_cors()
     self.end_headers()
 
   def do_HEAD(self):
     self.send_response(200)
-    self.send_header('Access-Control-Allow-Origin', 'https://gmalmquist.github.io')
-    self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
+    self._send_cors()
     self.end_headers()
 
   def do_GET(self):
@@ -365,6 +366,7 @@ class RequestHandler(BaseHTTPRequestHandler):
       self._send('Invalid data: {}'.format(str(e)).encode('utf8'), code = 400)
       return
     self.send_response(200)
+    self._send_cors()
     self.send_header('Content-Type', 'text/html')
     self.end_headers()
     write_cards(data, self.wfile)
