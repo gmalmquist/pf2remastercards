@@ -313,7 +313,6 @@ class RequestHandler(BaseHTTPRequestHandler):
   }
 
   def _send_cors(self):
-    self.send_header('Access-Control-Allow-Origin', 'https://gmalmquist.github.io')
     self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
 
   def _send(self, content, code = 200, mime = 'text/html'):
