@@ -314,6 +314,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
   def _send_cors(self):
     self.send_header('Access-Control-Allow-Origin', 'https://gwenscode.com')
+    self.send_header('Access-Control-Allow-Headers', '*')
 
   def _send(self, content, code = 200, mime = 'text/html'):
     self.send_response(code)
